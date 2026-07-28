@@ -5,9 +5,10 @@
     {
       "slug": "pipedrive",
       "name": "Pipedrive",
-      "source": "app-store-icon",
+      "source": "app-store-icon (color) + brand-site-vector-monogram (black/white/outline)",
       "style": "badge",
-      "master_format": "png"
+      "master_format": "png (color) / svg (black, white)",
+      "outline_stroke_px": 28
     },
     {
       "slug": "lark",
