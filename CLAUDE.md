@@ -123,6 +123,21 @@ pixels with partial/zero alpha) and, if true, skips flood-fill entirely - uses t
 alpha channel directly as the mask for color, and a simple threshold (`alpha > 127`) for
 black/white. Only run the flood-fill path for genuinely opaque sources.
 
+**Pitfall already hit once — a textured/particle/photographic background defeats
+corner-color flood-fill entirely, even though the actual brand mark is a simple flat
+glyph.** ActiveCampaign's App Store icon is a dark navy square covered in a colorful
+speckled dust-particle graphic, with a plain white ">" chevron as the real mark.
+Corner-color matching against that texture produced a grainy, scattered result - hundreds
+of disconnected foreground specks, not a clean silhouette. Fix used here (no generic
+helper yet, applied by hand): threshold by **brightness** instead of corner-color
+distance (`brightness > 200` isolates near-white pixels), then keep only the **largest
+connected component** (`scipy.ndimage.label` + take the biggest region) to drop the
+leftover bright dust specks. Color master stays the untouched original image (same
+principle as the badge/color-mask split above) - only black/white/outline use the
+brightness-derived mask. If this pattern recurs, it's worth promoting into
+`generate_icon.py` as a fallback path (e.g. try corner-flood-fill first, fall back to
+brightness+largest-component if the result has an implausibly high component count).
+
 ## Outline/stroke method
 
 Erode-and-subtract from the solid black silhouette mask:
