@@ -13,12 +13,17 @@ pip install -r scripts/requirements.txt   # Pillow, scipy, numpy
 cd scripts && npm install                  # sharp, for SVG rasterization
 ```
 
-- `floodfill2.py` — two-stage background removal (see below)
-- `make_outline.py` — stroke/outline generation via Euclidean distance transform
-- `make_gray.py` — gray/disabled tone from a black mask
-- `make_tile.py` — padding/visual-weight normalization
-- `resize_raster.py` — PNG master → full size ladder (PIL/LANCZOS)
-- `resize_svg.js` — SVG master → full size ladder (sharp)
+- `generate_icon.py` — the consolidated pipeline: `remove_background()` (two-stage flood
+  fill), `make_outline()` (Euclidean-distance-transform stroke, with automatic edge-touch
+  padding), `from_raster()` and `from_svg()` (full per-app entry points — masters + size
+  ladder). This is what every app should go through; don't hand-roll the steps separately.
+- `rasterize.py` — `rasterize_svg(svg_text, size) -> PIL.Image`, via a Node/sharp
+  subprocess (PIL alone can't rasterize SVG). Pass as `from_svg()`'s `rasterize_fn`.
+- `make_gray.py` — gray/disabled tone from a black mask (proposed variant, not yet
+  standard — see "Gray / disabled tone" below)
+- `make_tile.py` — padding/visual-weight normalization (proposed variant, not yet
+  standard). Note `generate_icon.py` has its own internal `pad_to_avoid_edge()` for the
+  outline edge-touch fix — same idea, separate implementation, not a shared import.
 
 ## Deliverable per app
 
@@ -64,7 +69,27 @@ Two-stage flood fill from `floodfill2.py`:
 **black/white**, never the mask used for **color**. Applying the fully-peeled mask to color
 strips the original container entirely (color output regresses to just the bare glyph on
 transparent, losing the recognizable badge). Keep two separate masks (`is_bg_color` vs
-`is_bg`) — see `floodfill2.py`.
+`is_bg`) — see `generate_icon.py`'s `remove_background()`.
+
+**Second pitfall already hit once — a badge can fill the entire canvas with zero margin**
+(LinkedIn: solid blue square, edge-to-edge, no separate matte). Here corner flood-fill's
+reference color IS the badge's own brand fill, so it eats the *whole badge*, not just
+padding — correct for the black/white glyph, wrong for color (loses the fill entirely).
+`fg_fraction` alone can't detect this: a legitimate matte removal (Lark's bird on white)
+and a wrongly-eaten brand fill (LinkedIn) can leave similarly-sized remainders (~20-30%
+of canvas either way). The real signal is **saturation of the corner reference color**
+(`max(rgb) - min(rgb)`): a genuine matte is neutral (white/black/gray) regardless of
+brightness; a brand fill is a saturated hue. If saturation > 25, skip stage-1 removal
+entirely for the color mask (keep the full original image) — the glyph mask for
+black/white is unaffected by this check. Already implemented in `remove_background()`.
+
+**Know when to stop: some logos don't survive automated silhouette extraction at all.**
+Disney+'s icon is a cursive script wordmark over a gradient/starry background — the
+pipeline can isolate *something*, but it comes out as an unrecognizable abstract shape,
+not legible text. Cursive/stylized wordmarks don't have the glyph-vs-background contrast
+this approach assumes. If a result doesn't actually read as the brand mark, don't ship
+it: keep color only, and flag the app in its Notion page + this doc as needing a
+manually-sourced vector wordmark for black/white/outline (see Disney+ for the pattern).
 
 ## Outline/stroke method
 

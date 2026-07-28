@@ -41,6 +41,10 @@ Two-stage automated background removal, so the silhouette shows the actual glyph
 
 Result: **color** keeps the full original badge (container + glyph); **black/white** show just the glyph silhouette, whether or not the source icon has a colored container.
 
+**Pitfall already hit once — a "badge" can fill the entire canvas with zero outer margin** (e.g. LinkedIn's flat blue "in" icon: solid blue, edge-to-edge, no separate matte). Here the corner-seeded flood-fill's reference color IS the badge's own brand fill, not true background, so it eats the *entire* badge — correct for the black/white glyph, but wrong for color (loses the badge fill entirely). `fg_fraction` can't distinguish this from a legitimate matte removal (e.g. Lark's bird on white leaves a similarly-sized remainder). The real signal is **saturation of the corner reference color**: a genuine background matte is neutral (white/black/gray, low saturation) at any brightness; a brand fill is usually a saturated, colorful hue. `generate_icon.py`'s `remove_background()` checks this — if the corner color's saturation (`max(rgb) - min(rgb)`) is above 25, stage-1 removal is skipped entirely for the **color** mask (kept as the full original image), while the glyph mask for black/white is unaffected.
+
+**Some icons just don't survive automated silhouette extraction — know when to stop and flag it.** Disney+'s icon is a cursive script wordmark ("Disney+") over a gradient/starry background. The two-stage removal can technically isolate *something*, but the result is an unrecognizable abstract shape, not legible text — cursive/stylized wordmarks don't have the clean glyph-vs-background contrast this pipeline assumes. When a black/white/outline result doesn't actually read as the brand mark, don't ship it — ship color only and flag the app as needing a manually-sourced vector wordmark for the other variants, same as the Notion page does for Disney+.
+
 ## Line/outline method
 
 Derived automatically from the solid black silhouette mask — no separate manual redraw:

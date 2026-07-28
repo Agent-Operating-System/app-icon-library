@@ -73,6 +73,20 @@ def remove_background(raster_path, tol1=30, tol2=70, container_area_threshold=0.
 
     fg_fraction = sum(row.count(False) for row in is_bg) / (w * h)
 
+    # Pitfall: some icons are a single solid-color square with NO separate outer
+    # matte (e.g. LinkedIn's flat blue "in" badge, edge-to-edge, no padding). Here
+    # the corner color IS the icon's own brand fill, not true background, so corner
+    # flood-fill eats the entire badge, leaving only the inner glyph - correct for
+    # the black/white silhouette, but wrong for "color" (loses the badge entirely).
+    # Distinguishing signal: a genuine background matte is neutral (white/black/gray
+    # padding, low saturation) regardless of how light or dark it is; a brand fill
+    # is usually a saturated, colorful hue. fg_fraction alone can't tell these
+    # apart - a real matte-removal (e.g. Lark's bird on white) and a wrongly-eaten
+    # brand fill (LinkedIn's blue badge) can leave a similarly-sized remainder.
+    saturation = max(bg_ref) - min(bg_ref)
+    if saturation > 25:
+        is_bg_color = [[False] * w for _ in range(h)]
+
     if fg_fraction > container_area_threshold:
         boundary_seeds, boundary_colors = [], []
         for y in range(h):
