@@ -46,8 +46,10 @@ Result: **color** keeps the full original badge (container + glyph); **black/whi
 Derived automatically from the solid black silhouette mask — no separate manual redraw:
 
 1. Take the solid silhouette's alpha mask.
-2. Erode it by a fixed stroke width using a min-filter (default ~4.3% of canvas, e.g. 44px at 1024px).
-3. Subtract the eroded mask from the original to leave a ring of that stroke width along every edge — outer contour and any interior holes (e.g. the grid cells inside the Google Sheets icon, or the bowl of Pipedrive's "p", come through as inner outline lines for free).
+2. Compute the Euclidean distance transform of the mask (`scipy.ndimage.distance_transform_edt`) — each foreground pixel's distance to the nearest background pixel.
+3. Ring = mask pixels whose distance is ≤ the stroke width (default ~4.3% of canvas, e.g. 44px at 1024px). Outer contour and any interior holes (e.g. the grid cells inside the Google Sheets icon, or the bowl of Pipedrive's "p") come through as inner outline lines for free, with smooth rounded corners since the distance transform is isotropic.
+
+**Do not use a square min-filter (e.g. PIL's `ImageFilter.MinFilter`) for the erosion step** — it was the first approach here and produced sharp, mitered corners at every turn instead of a smooth stroke, reading as "ugly"/technical rather than a proper line icon. The Euclidean distance transform is the fix; it's the same reason vector stroke tools default to round joins.
 
 Stroke width needs a per-icon sanity check: on a thin letterform (Pipedrive's "p") the default 44px is wider than the bowl's own ring, so the inner and outer erosion boundaries overlap into a double-line mess — dropping to ~28px fixed it. Rule of thumb: stroke width should be comfortably less than the thinnest stroke in the source glyph.
 
