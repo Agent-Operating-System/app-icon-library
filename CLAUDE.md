@@ -25,6 +25,25 @@ cd scripts && npm install                  # sharp, for SVG rasterization
   standard). Note `generate_icon.py` has its own internal `pad_to_avoid_edge()` for the
   outline edge-touch fix — same idea, separate implementation, not a shared import.
 
+**Pitfall already hit once — scraped SVGs can set fill via CSS `style=`, not a plain
+`fill=` attribute.** Skype's official logo (sourced from Wikipedia Commons after its own
+App Store listing disappeared — Microsoft retired the app) uses
+`style="fill:url(#gradient)"` on its `<path>` elements. `with_fill()`'s original regex only
+matched plain `fill="..."` attributes, so it silently left the gradient in place for
+black/white — the bug wasn't an error, just a no-op, which is easy to miss without a visual
+check. Fixed: `with_fill()` now also rewrites `style="...fill:..."` and injects `fill=` on
+any path with neither form (implicit-black SVG default).
+
+**Second pitfall — a "multi-tone" scraped source (badge + separate glyph, e.g. Skype's blue
+circle + white "S") must NOT be force-recolored for the color master.** `from_svg()`
+normally injects one hex into every path (correct for Simple Icons' single-color-glyph
+convention). Applying that same uniform recolor to an already-correctly-colored multi-part
+source flattens the badge and its glyph to the identical tone, erasing the cutout contrast
+entirely (this is a worse failure than it sounds - it silently produces a *plausible-looking
+solid blob* rather than an obvious error). Pass `multi_tone_source=True` for these sources:
+color keeps the SVG completely unmodified, while black/white still force one flat tone per
+path (which IS the desired silhouette behavior).
+
 ## Deliverable per app
 
 Variants: `color`, `black` (solid silhouette), `white` (solid silhouette), `outline-black`
