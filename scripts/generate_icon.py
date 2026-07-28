@@ -203,16 +203,46 @@ def export_ladder(master_img, out_dir, base_name):
         master_img.resize((s, s), Image.LANCZOS).save(f"{out_dir}/{base_name}-{s}.png")
 
 
+def _has_real_alpha(img, threshold_fraction=0.01):
+    """App Store icons are always fully opaque (alpha=255 everywhere) - that's the
+    assumption remove_background's corner flood-fill is built on. Some scraped
+    sources (e.g. a site's apple-touch-icon) are already a proper icon-on-transparent
+    PNG with real per-pixel alpha. Running flood-fill on top of that double-processes
+    it and can wipe the image out entirely (hit this with Paperform's favicon: every
+    corner pixel sampled landed in an already-transparent gap in the design, so
+    bg_ref was garbage and flood-fill matched everything). Detect real alpha first
+    and skip flood-fill entirely when present - use the native alpha as the mask.
+    """
+    alpha = np.array(img.getchannel("A"))
+    partial = np.sum((alpha > 5) & (alpha < 250))
+    return partial / alpha.size > threshold_fraction
+
+
 def from_raster(source_path, slug, out_root, stroke_px=DEFAULT_STROKE_PX):
     """App-store-icon-sourced pipeline: two-stage flood fill + outline."""
     app_dir = f"{out_root}/{slug}"
     png_dir = f"{app_dir}/png"
     os.makedirs(png_dir, exist_ok=True)
 
-    is_bg_color, is_bg_glyph, img = remove_background(source_path)
-    color = _mask_to_rgba(img, is_bg_color)
-    black = _mask_to_rgba(img, is_bg_glyph, fill=(0, 0, 0))
-    white = _mask_to_rgba(img, is_bg_glyph, fill=(255, 255, 255))
+    img = Image.open(source_path).convert("RGBA")
+    if _has_real_alpha(img):
+        alpha = img.getchannel("A")
+        glyph_mask = alpha.point(lambda p: 255 if p > 127 else 0)
+        w, h = img.size
+        color = img.copy()
+        black = Image.new("RGBA", (w, h), (0, 0, 0, 0))
+        white = Image.new("RGBA", (w, h), (0, 0, 0, 0))
+        black_rgb = Image.new("RGBA", (w, h), (0, 0, 0, 255))
+        white_rgb = Image.new("RGBA", (w, h), (255, 255, 255, 255))
+        black = Image.composite(black_rgb, black, glyph_mask)
+        white = Image.composite(white_rgb, white, glyph_mask)
+        black.putalpha(glyph_mask)
+        white.putalpha(glyph_mask)
+    else:
+        is_bg_color, is_bg_glyph, img = remove_background(source_path)
+        color = _mask_to_rgba(img, is_bg_color)
+        black = _mask_to_rgba(img, is_bg_glyph, fill=(0, 0, 0))
+        white = _mask_to_rgba(img, is_bg_glyph, fill=(255, 255, 255))
     outline_black, outline_white = make_outline(black, stroke_px)
 
     color.save(f"{app_dir}/{slug}-color.png")

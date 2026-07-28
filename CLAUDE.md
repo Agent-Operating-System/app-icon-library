@@ -106,9 +106,22 @@ black/white is unaffected by this check. Already implemented in `remove_backgrou
 Disney+'s icon is a cursive script wordmark over a gradient/starry background — the
 pipeline can isolate *something*, but it comes out as an unrecognizable abstract shape,
 not legible text. Cursive/stylized wordmarks don't have the glyph-vs-background contrast
-this approach assumes. If a result doesn't actually read as the brand mark, don't ship
-it: keep color only, and flag the app in its Notion page + this doc as needing a
-manually-sourced vector wordmark for black/white/outline (see Disney+ for the pattern).
+this approach assumes. Canva hit the identical failure mode (cursive "Canva" wordmark on
+a gradient badge). If a result doesn't actually read as the brand mark, don't ship it:
+keep color only, and flag the app in its Notion page + this doc as needing a
+manually-sourced vector wordmark for black/white/outline (see Disney+/Canva for the pattern).
+
+**Pitfall already hit once — `remove_background()`'s flood-fill assumes the source is a
+fully-opaque square (true for App Store icons), which breaks on a source that already has
+real per-pixel alpha** (e.g. a site's `apple-touch-icon.png`, which is a proper
+icon-on-transparent PNG, not a flat opaque square). Sampling the corner pixel as `bg_ref`
+is meaningless when that corner happens to land in an already-transparent gap in the
+design — flood-fill then matches garbage and can wipe the whole image out (hit this with
+Paperform's favicon: color came out fully transparent, zero opaque pixels anywhere).
+Fixed: `from_raster()` now checks `_has_real_alpha()` first (a meaningful fraction of
+pixels with partial/zero alpha) and, if true, skips flood-fill entirely - uses the native
+alpha channel directly as the mask for color, and a simple threshold (`alpha > 127`) for
+black/white. Only run the flood-fill path for genuinely opaque sources.
 
 ## Outline/stroke method
 
