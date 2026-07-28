@@ -1,0 +1,27 @@
+{
+  "sizes": [4, 8, 16, 24, 32, 48, 64, 96, 128, 256, 512, 1024],
+  "variants": ["color", "black", "white"],
+  "apps": [
+    {
+      "slug": "pipedrive",
+      "name": "Pipedrive",
+      "source": "app-store-icon",
+      "style": "badge",
+      "master_format": "png"
+    },
+    {
+      "slug": "lark",
+      "name": "Lark",
+      "source": "app-store-icon",
+      "style": "glyph-on-transparent",
+      "master_format": "png"
+    },
+    {
+      "slug": "google-sheets",
+      "name": "Google Sheets",
+      "source": "simple-icons",
+      "style": "glyph-on-transparent",
+      "master_format": "svg"
+    }
+  ]
+}
