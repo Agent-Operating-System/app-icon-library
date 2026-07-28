@@ -53,6 +53,8 @@ Derived automatically from the solid black silhouette mask — no separate manua
 
 Stroke width needs a per-icon sanity check: on a thin letterform (Pipedrive's "p") the default 44px is wider than the bowl's own ring, so the inner and outer erosion boundaries overlap into a double-line mess — dropping to ~28px fixed it. Rule of thumb: stroke width should be comfortably less than the thinnest stroke in the source glyph.
 
+**Also check whether the source mask touches the canvas edge before generating an outline.** Google Sheets' Simple Icons source has zero margin (its ink spans the full canvas top-to-bottom, by Simple Icons' design — they expect consumers to add their own padding). Solid black/white/color are fine edge-to-edge, but an outline's stroke ring has nowhere to close on an edge it's flush against, so it renders visibly clipped/cut off at that edge. Fix: pad the mask first (`make_tile.py`, ~8% margin) and generate the outline from the padded version — solid variants stay edge-to-edge as before, only the outline source gets padded.
+
 This holds up down to ~16px; below that the stroke gets thin enough to lose crispness, same limitation any detailed line icon has at very small sizes.
 
 ## Licensing note

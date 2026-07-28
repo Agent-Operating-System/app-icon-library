@@ -88,6 +88,16 @@ sanity-checked per icon. If the icon has a thin letterform stroke (e.g. the bowl
 hole overlap into a double-line mess. Rule of thumb: stroke width should be comfortably less
 than the thinnest stroke/ring in the source glyph. Check visually at 1024px before finalizing.
 
+**Pitfall already hit once — check the mask doesn't touch the canvas edge before generating
+an outline.** Google Sheets' Simple Icons source has zero margin (ink spans the full canvas
+top-to-bottom; Simple Icons is drawn edge-to-edge by design, expecting consumers to add their
+own padding). Solid black/white/color are fine rendered edge-to-edge, but an outline's stroke
+ring has no room to close on an edge it's flush against — it renders visibly clipped there.
+Before running `make_outline.py`, check `img.getbbox()` against the canvas size; if any side
+is flush (0 or full width/height), pad first with `make_tile.py` (~8% margin is enough to
+clear a 44px/1024px stroke) and generate the outline from that padded version. Solid variants
+are unaffected — only the outline's source gets padded.
+
 ## Padding / visual-weight normalization (tile variant)
 
 Icons vary wildly in how much of the canvas their "ink" fills — a badge icon can be ~100%,
