@@ -1,18 +1,22 @@
 # App Icon Library
 
-Reference set of SaaS/app icons: original color, black silhouette, and white silhouette, exported at multiple sizes, all on a 1:1 square canvas.
+Reference set of SaaS/app icons: original color, solid black/white silhouette, and black/white line (stroke-outline) versions, exported at multiple sizes, all on a 1:1 square canvas.
 
 ## Structure
 
 ```
 icons/<app-slug>/
-  <app-slug>-color.(svg|png)   # vector or high-res raster master, original brand color(s)
-  <app-slug>-black.(svg|png)   # solid black silhouette master
-  <app-slug>-white.(svg|png)   # solid white silhouette master
+  <app-slug>-color.(svg|png)           # vector or high-res raster master, original brand color(s)
+  <app-slug>-black.(svg|png)           # solid black silhouette master
+  <app-slug>-white.(svg|png)           # solid white silhouette master
+  <app-slug>-outline-black.png         # black line/stroke-outline master
+  <app-slug>-outline-white.png         # white line/stroke-outline master
   png/
     <app-slug>-color-<size>.png
     <app-slug>-black-<size>.png
     <app-slug>-white-<size>.png
+    <app-slug>-outline-black-<size>.png
+    <app-slug>-outline-white-<size>.png
 ```
 
 Sizes: 4, 8, 16, 24, 32, 48, 64, 96, 128, 256, 512, 1024 (px).
@@ -31,6 +35,16 @@ Two-stage automated background removal, so the silhouette shows the actual glyph
 3. **Component cleanup**: keep only connected foreground regions ≥10% of the largest one, to drop thin anti-aliasing/edge-halo artifacts left over from step 2.
 
 Result: **color** keeps the full original badge (container + glyph); **black/white** show just the glyph silhouette, whether or not the source icon has a colored container.
+
+## Line/outline method
+
+Derived automatically from the solid black silhouette mask — no separate manual redraw:
+
+1. Take the solid silhouette's alpha mask.
+2. Erode it by a fixed stroke width (~4.3% of canvas, e.g. 44px at 1024px) using a min-filter.
+3. Subtract the eroded mask from the original to leave a ring of that stroke width along every edge — outer contour and any interior holes (e.g. the grid cells inside the Google Sheets icon come through as inner outline lines for free).
+
+This holds up down to ~16px; below that the stroke gets thin enough to lose crispness, same limitation any detailed line icon has at very small sizes.
 
 ## Licensing note
 
