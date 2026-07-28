@@ -227,21 +227,47 @@ def from_raster(source_path, slug, out_root, stroke_px=DEFAULT_STROKE_PX):
     print(f"[raster] {slug}: done")
 
 
-def from_svg(svg_text, slug, out_root, hex_color, stroke_px=DEFAULT_STROKE_PX, rasterize_fn=None):
+def from_svg(svg_text, slug, out_root, hex_color=None, stroke_px=DEFAULT_STROKE_PX,
+             rasterize_fn=None, multi_tone_source=False):
     """Vector-sourced pipeline (Simple Icons or a scraped brand-site monogram).
     rasterize_fn(svg_text: str, size: int) -> PIL.Image must be supplied by the caller
-    (uses `sharp` via a Node subprocess - see resize_svg.js) since PIL alone can't
-    rasterize SVG."""
+    (uses `sharp` via a Node subprocess - see rasterize.py) since PIL alone can't
+    rasterize SVG.
+
+    multi_tone_source: set True for scraped SVGs that are ALREADY correctly colored
+    with more than one tone (e.g. a badge icon like Skype: blue circle + white "S"
+    cutout, sourced from Wikipedia/a brand site, as opposed to a Simple Icons-style
+    single-color glyph that needs its hex injected). When True, hex_color is ignored
+    and the color master uses the SVG completely unmodified - forcing every path to
+    one hex would flatten the badge and its glyph to the same tone, erasing the
+    cutout contrast entirely (hit this exact bug with Skype's gradient circle + "S").
+    Black/white masters still force every path to one flat tone either way, since
+    that IS what a silhouette should look like."""
     app_dir = f"{out_root}/{slug}"
     png_dir = f"{app_dir}/png"
     os.makedirs(png_dir, exist_ok=True)
 
     def with_fill(svg, hexcolor):
+        # Some scraped SVGs (e.g. Wikipedia-hosted logos) set fill via a CSS style
+        # attribute (style="fill:url(#gradient)") rather than a plain fill="..."
+        # attribute - a plain fill="..." regex silently misses these paths, leaving
+        # the original gradient/color in place. Handle both forms.
+        svg = re.sub(r'(style="[^"]*?fill:)[^;"]*', rf'\g<1>#{hexcolor}', svg)
         if re.search(r'<path[^>]*\sfill=', svg):
-            return re.sub(r'(<path[^>]*\sfill=")[^"]*(")', rf'\g<1>#{hexcolor}\g<2>', svg)
-        return re.sub(r'<path ', f'<path fill="#{hexcolor}" ', svg, count=0)
+            svg = re.sub(r'(<path[^>]*\sfill=")[^"]*(")', rf'\g<1>#{hexcolor}\g<2>', svg)
+        # Any <path> with neither a fill= attribute nor a style-based fill defaults
+        # to SVG's implicit black - make that explicit too.
+        def inject_if_missing(m):
+            tag = m.group(0)
+            if 'fill=' in tag or 'fill:' in tag:
+                return tag
+            if tag.endswith('/>'):
+                return tag[:-2] + f' fill="#{hexcolor}"/>'
+            return tag[:-1] + f' fill="#{hexcolor}">'
+        svg = re.sub(r'<path\b[^>]*>', inject_if_missing, svg)
+        return svg
 
-    color_svg = with_fill(svg_text, hex_color)
+    color_svg = svg_text if multi_tone_source else with_fill(svg_text, hex_color)
     black_svg = with_fill(svg_text, "000000")
     white_svg = with_fill(svg_text, "FFFFFF")
 
