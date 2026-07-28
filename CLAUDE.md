@@ -118,10 +118,22 @@ icon-on-transparent PNG, not a flat opaque square). Sampling the corner pixel as
 is meaningless when that corner happens to land in an already-transparent gap in the
 design — flood-fill then matches garbage and can wipe the whole image out (hit this with
 Paperform's favicon: color came out fully transparent, zero opaque pixels anywhere).
-Fixed: `from_raster()` now checks `_has_real_alpha()` first (a meaningful fraction of
-pixels with partial/zero alpha) and, if true, skips flood-fill entirely - uses the native
-alpha channel directly as the mask for color, and a simple threshold (`alpha > 127`) for
-black/white. Only run the flood-fill path for genuinely opaque sources.
+Fixed: `from_raster()` now checks `_has_real_alpha()` first and, if true, skips flood-fill
+entirely - uses the native alpha channel directly as the mask for color, and a simple
+threshold (`alpha > 127`) for black/white. Only run the flood-fill path for genuinely
+opaque sources.
+
+`_has_real_alpha()`'s first version checked for *partial* alpha (anti-aliasing pixels) and
+broke again immediately on Midjourney's logo - a rasterized stroke-only SVG (thin black
+outline strokes, fully transparent everywhere else). A thin stroke's anti-aliasing is a
+tiny fraction of a 1024x1024 canvas, so the partial-alpha check missed it, fell through to
+flood-fill, and - blind to alpha, matching on RGB only - couldn't tell "black stroke,
+alpha=255" from "black-ish fill under alpha=0 background," wiping the whole image out
+identically to the Paperform bug. Fixed properly: check for a meaningful fraction of both
+**fully-transparent** (`alpha < 10`) AND **fully-opaque** (`alpha > 245`) pixels - robust
+to both anti-aliased icon-on-transparent PNGs and hard-edged stroke-only vectors.
+
+**Pitfall already hit once — a textured/particle/photographic background defeats
 
 **Pitfall already hit once — a textured/particle/photographic background defeats
 corner-color flood-fill entirely, even though the actual brand mark is a simple flat

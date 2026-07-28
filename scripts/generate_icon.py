@@ -206,16 +206,27 @@ def export_ladder(master_img, out_dir, base_name):
 def _has_real_alpha(img, threshold_fraction=0.01):
     """App Store icons are always fully opaque (alpha=255 everywhere) - that's the
     assumption remove_background's corner flood-fill is built on. Some scraped
-    sources (e.g. a site's apple-touch-icon) are already a proper icon-on-transparent
-    PNG with real per-pixel alpha. Running flood-fill on top of that double-processes
-    it and can wipe the image out entirely (hit this with Paperform's favicon: every
-    corner pixel sampled landed in an already-transparent gap in the design, so
-    bg_ref was garbage and flood-fill matched everything). Detect real alpha first
-    and skip flood-fill entirely when present - use the native alpha as the mask.
+    sources (e.g. a site's apple-touch-icon, or a rasterized stroke-only SVG) are
+    already a proper icon-on-transparent PNG with real per-pixel alpha. Running
+    flood-fill on top of that double-processes it and can wipe the image out
+    entirely (hit this with Paperform's favicon: every corner pixel sampled landed
+    in an already-transparent gap in the design, so bg_ref was garbage and
+    flood-fill matched everything). Detect real alpha first and skip flood-fill
+    entirely when present - use the native alpha as the mask.
+
+    Check for fully-transparent pixels (alpha near 0), not partial/anti-aliased
+    alpha - a thin stroke-only glyph (e.g. Midjourney's logo, all thin strokes on
+    an otherwise fully transparent 1024x1024 canvas) has anti-aliasing that's a
+    tiny fraction of the canvas, but a LARGE fraction of true zero-alpha
+    background. Checking partial alpha alone missed this and fell through to
+    flood-fill, which - blind to alpha, working on RGB only - can't distinguish
+    "black stroke, alpha=255" from "black-ish fill under alpha=0 background",
+    wiping the whole image if they share an RGB value.
     """
     alpha = np.array(img.getchannel("A"))
-    partial = np.sum((alpha > 5) & (alpha < 250))
-    return partial / alpha.size > threshold_fraction
+    transparent = np.sum(alpha < 10)
+    opaque = np.sum(alpha > 245)
+    return transparent / alpha.size > threshold_fraction and opaque / alpha.size > threshold_fraction
 
 
 def from_raster(source_path, slug, out_root, stroke_px=DEFAULT_STROKE_PX):
