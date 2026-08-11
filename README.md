@@ -61,6 +61,14 @@ Stroke width needs a per-icon sanity check: on a thin letterform (Pipedrive's "p
 
 This holds up down to ~16px; below that the stroke gets thin enough to lose crispness, same limitation any detailed line icon has at very small sizes.
 
+## Reusable action icons (Notion, Google Drive, Google Calendar, WhatsApp, ChatDaddy)
+
+A separate system of shared "action" icons (Find, Retrieve, Send Message, etc.) lives in
+the **Reusable Icon** Notion database, with per-app icon+badge mashup composites stored
+in `icons/_reusable-mashups/` in this repo. To change one of these icons — Lordicon login
+steps, which apps get affected, how to regenerate mashups, and how to update the Notion
+pages — see **[HOW_TO_UPDATE_REUSABLE_ICONS.md](./HOW_TO_UPDATE_REUSABLE_ICONS.md)**.
+
 ## Licensing note
 
 All logos are trademarks of their respective companies. Simple Icons entries are CC0-licensed reproductions; App Store-sourced icons are the companies' own copyrighted assets pulled from their public listings. This library is for internal reference use — check each brand's guidelines before external/public use, especially before recoloring or altering their mark.
