@@ -183,14 +183,46 @@ For each affected app's page in the App Icon database:
 
 ---
 
+### 3.5 Regenerate the size ladder
+
+Each reusable action icon also has a full size ladder (2, 4, 8, 12, 16, 24, 32, 48, 64,
+96, 128, 200 px) for all 4 variants, stored in GitHub — same pattern as the mashups and
+the third-party app icons, so Notion only needs to show one preview size while the real
+range lives here. When you change an action's master SVG, regenerate its ladder:
+
+```
+python3 scripts/build_reusable_action_sizes.py
+```
+
+This reads the master SVGs from the local path hardcoded at the top of the script
+(`SRC_ROOT`, currently Shivonne's machine — update this if the source-of-truth location
+changes) and writes to `icons/_reusable-actions/<action-slug>/png/`. It regenerates
+*all* 26 actions every run (not just the one you changed) — safe to run in full each
+time since it's a few seconds per action, but if you only changed one action you can
+comment out the others in the `ACTIONS` dict to save time.
+
+**Known limit, not a bug:** the 2px and 4px renders of any Outline-style icon are
+functionally just noise (the stroke is too thin to survive at that pixel count) — this
+matches the same documented limitation as the third-party app icons' outline variants
+(see "Line/outline method" above: "holds up down to ~16px"). They're still generated for
+size-ladder consistency, just don't expect them to be visually legible.
+
+After regenerating, `git add`, commit, push, then follow 3.4's cache-busting note if the
+Notion preview doesn't refresh.
+
+---
+
 ## Quick reference: file/folder map
 
 ```
 icons/<app-slug>/                          # per-app icon set (existing system, unrelated to reusable icons)
 icons/_reusable-mashups/<app-slug>/        # action-icon x app-badge composites, one per (app, action) pair
+icons/_reusable-actions/<action-slug>/png/ # full 2-200px size ladder per reusable action, 4 variants each
 ```
 
-The reusable action icons' own 4 master SVGs (Solid/Outline × Black/White) are **not**
-stored in this GitHub repo — they live only as file attachments directly on each
-action's Reusable Icon Notion page. Only the derived mashup composites (which need a
-stable public URL for Notion to embed) live here in GitHub.
+The reusable action icons' master SVGs (Solid/Outline × Black/White) still live only as
+file attachments directly on each action's Reusable Icon Notion page — that's the
+source of truth. This repo only hosts the *derived* renders (size ladder + mashups),
+which need a stable public URL for Notion to embed. If you update a master SVG on the
+Notion page, you must also re-run `build_reusable_action_sizes.py` (3.5) and the mashup
+regeneration (3.2) — the GitHub copies don't auto-sync from Notion.
