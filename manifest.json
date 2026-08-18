@@ -1,6 +1,25 @@
 {
-  "sizes": [4, 8, 16, 24, 32, 48, 64, 96, 128, 256, 512, 1024],
-  "variants": ["color", "black", "white", "outline-black", "outline-white"],
+  "sizes": [
+    4,
+    8,
+    16,
+    24,
+    32,
+    48,
+    64,
+    96,
+    128,
+    256,
+    512,
+    1024
+  ],
+  "variants": [
+    "color",
+    "black",
+    "white",
+    "outline-black",
+    "outline-white"
+  ],
   "apps": [
     {
       "slug": "pipedrive",
@@ -23,6 +42,22 @@
       "source": "simple-icons",
       "style": "glyph-on-transparent",
       "master_format": "svg"
+    },
+    {
+      "slug": "google",
+      "name": "Google",
+      "source": "simple-icons",
+      "style": "glyph-on-transparent",
+      "master_format": "svg",
+      "brand_hex": "4285F4"
+    },
+    {
+      "slug": "google-maps",
+      "name": "Google Maps",
+      "source": "simple-icons",
+      "style": "glyph-on-transparent",
+      "master_format": "svg",
+      "brand_hex": "4285F4"
     }
   ]
 }
